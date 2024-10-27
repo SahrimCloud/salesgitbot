@@ -1,5 +1,5 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputFile
-from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters, 
+from telegram.ext import (Application, CommandHandler, MessageHandler, filters, 
                           ConversationHandler, CallbackContext, CallbackQueryHandler)
 
 # Etapas del flujo de la conversación
