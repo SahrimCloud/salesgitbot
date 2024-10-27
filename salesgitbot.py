@@ -6,7 +6,7 @@ from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters,
 NOMBRE, PETICION, TIPO, CANTIDAD, COLOR, DIMENSIONES, ENLACE, FECHA, COMENTARIOS, FOTOS = range(10)
 
 # Token del bot proporcionado por BotFather
-TOKEN = 7404262192:AAE-Vhp4xBKbJF4xnUXl15Bw2svfeVlnSZo
+TOKEN = "7404262192:AAE-Vhp4xBKbJF4xnUXl15Bw2svfeVlnSZo"
 
 def start(update: Update, context: CallbackContext) -> int:
     """Inicia el proceso de solicitud."""
