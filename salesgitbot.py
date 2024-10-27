@@ -103,7 +103,7 @@ async def cancelar(update: Update, context: CallbackContext):
 
 def main():
     """Inicia el bot."""
-    TOKEN = os.getenv("7404262192:AAE4s5O9Ob0RjwVCxfZlzDvkJkrbOSJRXVc")
+    TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 
     if not TOKEN:
         raise ValueError("No se encontró el token. Verifica las variables de entorno.")
