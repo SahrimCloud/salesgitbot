@@ -1,8 +1,8 @@
 import os
 from telegram import Update, ForceReply
 from telegram.ext import (
-    ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes, 
-    ConversationHandler, CallbackContext
+    ApplicationBuilder, CommandHandler, MessageHandler, filters, 
+    ContextTypes, ConversationHandler, CallbackContext
 )
 
 # Estados de la conversación
@@ -82,17 +82,19 @@ async def finalizar(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Muestra el resumen de la solicitud."""
     data = context.user_data
     resumen = (
-        f"✨ *Solicitud Completada* ✨\n\n"
-        f"👤 *Nombre:* {data['nombre']}\n"
-        f"📝 *Petición:* {data['peticion']}\n"
-        f"🏷️ *Tipo de Cliente:* {data['cliente'].capitalize()}\n"
-        f"🔢 *Cantidad:* {data['cantidad']}\n"
-        f"🎨 *Color:* {data['color']}\n"
-        f"📐 *Dimensiones:* {data['dimensiones']}\n"
-        f"🔗 *Enlace/Archivo:* {data['enlace']}\n"
-        f"📅 *Fecha de Entrega:* {data['fecha']}\n"
-        f"💬 *Comentarios:* {data['comentarios']}\n"
-        f"🖼️ *Fotos adjuntas:* {'Sí' if 'fotos' in data else 'No'}"
+        "✨ *Solicitud Completada* ✨\n\n"
+        "```\n"
+        f"👤 Nombre: {data['nombre']}\n"
+        f"📝 Petición: {data['peticion']}\n"
+        f"🏷️ Tipo de Cliente: {data['cliente'].capitalize()}\n"
+        f"🔢 Cantidad: {data['cantidad']}\n"
+        f"🎨 Color: {data['color']}\n"
+        f"📐 Dimensiones: {data['dimensiones']}\n"
+        f"🔗 Enlace/Archivo: {data['enlace']}\n"
+        f"📅 Fecha de Entrega: {data['fecha']}\n"
+        f"💬 Comentarios: {data['comentarios']}\n"
+        f"🖼️ Fotos adjuntas: {'Sí' if 'fotos' in data else 'No'}\n"
+        "```"
     )
     await update.message.reply_text(resumen, parse_mode="Markdown")
 
@@ -135,7 +137,9 @@ def main():
     app.add_handler(conv_handler)
 
     print("Bot iniciado...")
-    app.run_polling()
+    
+    # Habilita el bot para recibir eventos en temas/hilos
+    app.run_polling(allowed_updates=["message", "edited_message", "channel_post", "my_chat_member"])
 
 if __name__ == "__main__":
     main()
