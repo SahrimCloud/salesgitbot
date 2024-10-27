@@ -1,135 +1,135 @@
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputFile
-from telegram.ext import (Application, CommandHandler, MessageHandler, filters, 
-                          ConversationHandler, CallbackContext, CallbackQueryHandler)
+import os
+from telegram import Update, ForceReply
+from telegram.ext import (
+    ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes, 
+    ConversationHandler, CallbackContext
+)
 
-# Etapas del flujo de la conversación
-NOMBRE, PETICION, TIPO, CANTIDAD, COLOR, DIMENSIONES, ENLACE, FECHA, COMENTARIOS, FOTOS = range(10)
+# Estados de la conversación
+NOMBRE, PETICION, CLIENTE, CANTIDAD, COLOR, DIMENSIONES, ENLACE, FECHA, COMENTARIOS, FOTOS = range(10)
 
-# Token del bot proporcionado por BotFather
-TOKEN = "7404262192:AAE-Vhp4xBKbJF4xnUXl15Bw2svfeVlnSZo"
-
-def start(update: Update, context: CallbackContext) -> int:
-    """Inicia el proceso de solicitud."""
-    update.message.reply_text('¡Hola! Empecemos con tu solicitud. Por favor ingresa tu **nombre o el de tu empresa**:')
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Inicia la conversación."""
+    await update.message.reply_text("Bienvenido. Por favor, ingresa el nombre de la persona o empresa:")
     return NOMBRE
 
-def nombre(update: Update, context: CallbackContext) -> int:
-    context.user_data['nombre'] = update.message.text
-    update.message.reply_text('¿Cuál es el **nombre de la petición**?')
+async def nombre(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Guarda el nombre e inicia la siguiente pregunta."""
+    context.user_data["nombre"] = update.message.text
+    await update.message.reply_text("¿Cuál es el nombre de la petición?")
     return PETICION
 
-def peticion(update: Update, context: CallbackContext) -> int:
-    context.user_data['peticion'] = update.message.text
-    keyboard = [
-        [InlineKeyboardButton("Cosplayer", callback_data='Cosplayer')],
-        [InlineKeyboardButton("Premium", callback_data='Premium')],
-        [InlineKeyboardButton("Nuevo", callback_data='Nuevo')]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    update.message.reply_text('Selecciona el **tipo de cliente**:', reply_markup=reply_markup)
-    return TIPO
+async def peticion(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Guarda la petición y pregunta el tipo de cliente."""
+    context.user_data["peticion"] = update.message.text
+    await update.message.reply_text("¿Qué tipo de cliente es? Elige entre: Cosplayer, Premium o Nuevo.")
+    return CLIENTE
 
-def tipo(update: Update, context: CallbackContext) -> int:
-    query = update.callback_query
-    query.answer()
-    context.user_data['tipo'] = query.data
-    query.edit_message_text(f"Seleccionaste: {query.data}. ¿Cuál es la **cantidad** solicitada?")
+async def cliente(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Guarda el tipo de cliente."""
+    tipo = update.message.text.lower()
+    if tipo not in ["cosplayer", "premium", "nuevo"]:
+        await update.message.reply_text("Por favor, elige: Cosplayer, Premium o Nuevo.")
+        return CLIENTE
+    context.user_data["cliente"] = tipo
+    await update.message.reply_text("¿Cuál es la cantidad?")
     return CANTIDAD
 
-def cantidad(update: Update, context: CallbackContext) -> int:
-    context.user_data['cantidad'] = update.message.text
-    update.message.reply_text('¿Cuál es el **color** de la pieza?')
+async def cantidad(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data["cantidad"] = update.message.text
+    await update.message.reply_text("¿De qué color es la pieza?")
     return COLOR
 
-def color(update: Update, context: CallbackContext) -> int:
-    context.user_data['color'] = update.message.text
-    update.message.reply_text('¿Cuáles son las **dimensiones** de la pieza? (Ej: 10x10x15 cm)')
+async def color(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data["color"] = update.message.text
+    await update.message.reply_text("¿Cuáles son las dimensiones de la pieza?")
     return DIMENSIONES
 
-def dimensiones(update: Update, context: CallbackContext) -> int:
-    context.user_data['dimensiones'] = update.message.text
-    update.message.reply_text('Proporciona un **enlace al archivo STL** o **adjunta el archivo**.')
+async def dimensiones(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data["dimensiones"] = update.message.text
+    await update.message.reply_text("Por favor, proporciona el enlace del STL o adjunta el archivo.")
     return ENLACE
 
-def enlace(update: Update, context: CallbackContext) -> int:
+async def enlace(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.document:
-        context.user_data['enlace'] = "Archivo adjunto."
+        context.user_data["enlace"] = update.message.document.file_id
     else:
-        context.user_data['enlace'] = update.message.text
-    update.message.reply_text('¿Cuál es la **fecha de entrega** esperada? (Ej: 2024-10-30)')
+        context.user_data["enlace"] = update.message.text
+    await update.message.reply_text("¿Cuál es la fecha de entrega?")
     return FECHA
 
-def fecha(update: Update, context: CallbackContext) -> int:
-    context.user_data['fecha'] = update.message.text
-    update.message.reply_text('¿Tienes algún **comentario adicional**?')
+async def fecha(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data["fecha"] = update.message.text
+    await update.message.reply_text("¿Deseas añadir algún comentario adicional?")
     return COMENTARIOS
 
-def comentarios(update: Update, context: CallbackContext) -> int:
-    context.user_data['comentarios'] = update.message.text
-    update.message.reply_text('Si deseas, puedes **adjuntar fotos de ejemplo**. De lo contrario, escribe /skip.')
+async def comentarios(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data["comentarios"] = update.message.text
+    await update.message.reply_text("Si quieres, adjunta fotos. Si no, escribe /skip.")
     return FOTOS
 
-def fotos(update: Update, context: CallbackContext) -> int:
+async def fotos(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.photo:
-        context.user_data['fotos'] = "Fotos adjuntadas."
-    else:
-        context.user_data['fotos'] = "Sin fotos."
-
-    # Mostrar resumen de la solicitud
-    resumen = (
-        f"**Solicitud creada:**\n"
-        f"Nombre: {context.user_data['nombre']}\n"
-        f"Petición: {context.user_data['peticion']}\n"
-        f"Tipo de cliente: {context.user_data['tipo']}\n"
-        f"Cantidad: {context.user_data['cantidad']}\n"
-        f"Color: {context.user_data['color']}\n"
-        f"Dimensiones: {context.user_data['dimensiones']}\n"
-        f"Enlace/Archivo: {context.user_data['enlace']}\n"
-        f"Fecha de Entrega: {context.user_data['fecha']}\n"
-        f"Comentarios: {context.user_data['comentarios']}\n"
-        f"Fotos: {context.user_data['fotos']}"
-    )
-    update.message.reply_text(resumen, parse_mode='Markdown')
+        context.user_data["fotos"] = update.message.photo[-1].file_id
+    await finalizar(update, context)
     return ConversationHandler.END
 
-def skip_fotos(update: Update, context: CallbackContext) -> int:
-    context.user_data['fotos'] = "Sin fotos."
-    return fotos(update, context)
+async def skip_fotos(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await finalizar(update, context)
+    return ConversationHandler.END
 
-def cancelar(update: Update, context: CallbackContext) -> int:
-    update.message.reply_text('Solicitud cancelada. ¡Hasta luego!')
+async def finalizar(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Muestra el resumen de la solicitud."""
+    data = context.user_data
+    resumen = (
+        f"✨ *Solicitud Completada* ✨\n\n"
+        f"👤 *Nombre:* {data['nombre']}\n"
+        f"📝 *Petición:* {data['peticion']}\n"
+        f"🏷️ *Tipo de Cliente:* {data['cliente'].capitalize()}\n"
+        f"🔢 *Cantidad:* {data['cantidad']}\n"
+        f"🎨 *Color:* {data['color']}\n"
+        f"📐 *Dimensiones:* {data['dimensiones']}\n"
+        f"🔗 *Enlace/Archivo:* {data['enlace']}\n"
+        f"📅 *Fecha de Entrega:* {data['fecha']}\n"
+        f"💬 *Comentarios:* {data['comentarios']}\n"
+        f"🖼️ *Fotos adjuntas:* {'Sí' if 'fotos' in data else 'No'}"
+    )
+    await update.message.reply_text(resumen, parse_mode="Markdown")
+
+async def cancelar(update: Update, context: CallbackContext):
+    """Cancela la conversación."""
+    await update.message.reply_text("Solicitud cancelada. Puedes iniciar de nuevo con /start.")
     return ConversationHandler.END
 
 def main():
-    application = Updater(TOKEN, use_context=True)
-    dp = application.dispatcher
+    """Inicia el bot."""
+    TOKEN = os.getenv("7404262192:AAE-Vhp4xBKbJF4xnUXl15Bw2svfeVlnSZo")
+    app = ApplicationBuilder().token(TOKEN).build()
 
-    # Definir el flujo de la conversación
     conv_handler = ConversationHandler(
-        entry_points=[CommandHandler('start', start)],
+        entry_points=[CommandHandler("start", start)],
         states={
-            NOMBRE: [MessageHandler(filters.text & ~filters.command, nombre)],
-            PETICION: [MessageHandler(filters.text & ~filters.command, peticion)],
-            TIPO: [CallbackQueryHandler(tipo)],
-            CANTIDAD: [MessageHandler(filters.text & ~filters.command, cantidad)],
-            COLOR: [MessageHandler(filters.text & ~filters.command, color)],
-            DIMENSIONES: [MessageHandler(filters.text & ~filters.command, dimensiones)],
-            ENLACE: [MessageHandler(filters.text | filters.document, enlace)],
-            FECHA: [MessageHandler(filters.text & ~filters.command, fecha)],
-            COMENTARIOS: [MessageHandler(filters.text & ~filters.command, comentarios)],
+            NOMBRE: [MessageHandler(filters.TEXT & ~filters.COMMAND, nombre)],
+            PETICION: [MessageHandler(filters.TEXT & ~filters.COMMAND, peticion)],
+            CLIENTE: [MessageHandler(filters.TEXT & ~filters.COMMAND, cliente)],
+            CANTIDAD: [MessageHandler(filters.TEXT & ~filters.COMMAND, cantidad)],
+            COLOR: [MessageHandler(filters.TEXT & ~filters.COMMAND, color)],
+            DIMENSIONES: [MessageHandler(filters.TEXT & ~filters.COMMAND, dimensiones)],
+            ENLACE: [MessageHandler(filters.ALL & ~filters.COMMAND, enlace)],
+            FECHA: [MessageHandler(filters.TEXT & ~filters.COMMAND, fecha)],
+            COMENTARIOS: [MessageHandler(filters.TEXT & ~filters.COMMAND, comentarios)],
             FOTOS: [
-                MessageHandler(filters.photo, fotos),
-                CommandHandler('skip', skip_fotos)
+                MessageHandler(filters.PHOTO, fotos),
+                CommandHandler("skip", skip_fotos),
             ],
         },
-        fallbacks=[CommandHandler('cancelar', cancelar)]
+        fallbacks=[CommandHandler("cancel", cancelar)],
     )
 
-    dp.add_handler(conv_handler)
+    app.add_handler(conv_handler)
 
-    # Iniciar el bot
-    application.start_polling()
-    application.idle()
+    print("Bot iniciado...")
+    app.run_polling()
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
