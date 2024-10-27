@@ -101,24 +101,24 @@ def cancelar(update: Update, context: CallbackContext) -> int:
     return ConversationHandler.END
 
 def main():
-    updater = Updater(TOKEN, use_context=True)
-    dp = updater.dispatcher
+    application = Updater(TOKEN, use_context=True)
+    dp = application.dispatcher
 
     # Definir el flujo de la conversación
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start)],
         states={
-            NOMBRE: [MessageHandler(Filters.text & ~Filters.command, nombre)],
-            PETICION: [MessageHandler(Filters.text & ~Filters.command, peticion)],
+            NOMBRE: [MessageHandler(filters.text & ~filters.command, nombre)],
+            PETICION: [MessageHandler(filters.text & ~filters.command, peticion)],
             TIPO: [CallbackQueryHandler(tipo)],
-            CANTIDAD: [MessageHandler(Filters.text & ~Filters.command, cantidad)],
-            COLOR: [MessageHandler(Filters.text & ~Filters.command, color)],
-            DIMENSIONES: [MessageHandler(Filters.text & ~Filters.command, dimensiones)],
-            ENLACE: [MessageHandler(Filters.text | Filters.document, enlace)],
-            FECHA: [MessageHandler(Filters.text & ~Filters.command, fecha)],
-            COMENTARIOS: [MessageHandler(Filters.text & ~Filters.command, comentarios)],
+            CANTIDAD: [MessageHandler(filters.text & ~filters.command, cantidad)],
+            COLOR: [MessageHandler(filters.text & ~filters.command, color)],
+            DIMENSIONES: [MessageHandler(filters.text & ~filters.command, dimensiones)],
+            ENLACE: [MessageHandler(filters.text | filters.document, enlace)],
+            FECHA: [MessageHandler(filters.text & ~filters.command, fecha)],
+            COMENTARIOS: [MessageHandler(filters.text & ~filters.command, comentarios)],
             FOTOS: [
-                MessageHandler(Filters.photo, fotos),
+                MessageHandler(filters.photo, fotos),
                 CommandHandler('skip', skip_fotos)
             ],
         },
@@ -128,8 +128,8 @@ def main():
     dp.add_handler(conv_handler)
 
     # Iniciar el bot
-    updater.start_polling()
-    updater.idle()
+    application.start_polling()
+    application.idle()
 
 if __name__ == '__main__':
     main()
