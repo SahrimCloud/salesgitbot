@@ -104,6 +104,12 @@ async def cancelar(update: Update, context: CallbackContext):
 def main():
     """Inicia el bot."""
     TOKEN = os.getenv("7404262192:AAE-Vhp4xBKbJF4xnUXl15Bw2svfeVlnSZo")
+
+    if not TOKEN:
+        raise ValueError("No se encontró el token. Verifica las variables de entorno.")
+
+    print(f"Usando el token: {TOKEN[:5]}... (truncado para seguridad)")
+
     app = ApplicationBuilder().token(TOKEN).build()
 
     conv_handler = ConversationHandler(
