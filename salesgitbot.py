@@ -1,15 +1,16 @@
 import os
+import asyncio  # Necesario para manejar tareas asíncronas
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import (
     ApplicationBuilder, CommandHandler, MessageHandler, filters, 
     ContextTypes, ConversationHandler, CallbackContext
 )
-from aiohttp import web  # Librería adicional para el servidor web
+from aiohttp import web, ClientSession  # Para el servidor web y hacer pings HTTP
 
 # Estados de la conversación
 NOMBRE, PETICION, CLIENTE, CANTIDAD, COLOR, DIMENSIONES, ENLACE, FECHA, COMENTARIOS, FOTOS, EDITAR = range(11)
 
-# --- Conversación del bot (igual a tu código original) ---
+# --- Conversación del bot ---
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data.clear()  
     await update.message.reply_text("Bienvenido. Por favor, ingresa el nombre de la persona o empresa:")
@@ -23,8 +24,21 @@ async def cancelar(update: Update, context: CallbackContext):
 
 # --- Nuevo: Manejador de ping ---
 async def handle_ping(request):
-    """Responde a los pings de UptimeRobot."""
+    """Responde a los pings de prueba."""
     return web.Response(text="Bot activo", status=200)
+
+# --- Nuevo: Tarea de auto-ping ---
+async def auto_ping():
+    """Envía pings cada minuto para mantener la aplicación activa."""
+    url = os.getenv("RENDER_EXTERNAL_URL")  # URL de tu app en Render
+    async with ClientSession() as session:
+        while True:
+            try:
+                async with session.get(url) as response:
+                    print(f"Ping enviado. Estado: {response.status}")
+            except Exception as e:
+                print(f"Error en el ping: {e}")
+            await asyncio.sleep(60)  # Espera 60 segundos antes de enviar otro ping
 
 def main():
     TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
@@ -50,14 +64,17 @@ def main():
     )
     app.add_handler(conv_handler)
 
-    # --- Nuevo: Servidor web para pings ---
+    # --- Servidor web para pings ---
     web_app = web.Application()
     web_app.router.add_get("/", handle_ping)
 
-    # Correr el bot y el servidor web
+    # Ejecutar el servidor web en un puerto específico
+    loop = asyncio.get_event_loop()
+    loop.create_task(auto_ping())  # Lanzar la tarea de auto-ping en paralelo
+
     app.run_webhook(
-        listen="0.0.0.0",  # Escucha en todas las interfaces
-        port=int(os.getenv("PORT", 5000)),  # Puerto definido por Render
+        listen="0.0.0.0",
+        port=int(os.getenv("PORT", 5000)),
         webhook_url=os.getenv("RENDER_EXTERNAL_URL") + "/webhook",
     )
 
