@@ -14,8 +14,9 @@ NOMBRE, PETICION, CLIENTE, CANTIDAD, COLOR, DIMENSIONES, ENLACE, FECHA, COMENTAR
 # Configuración del logging
 logging.basicConfig(level=logging.INFO)
 
-# Auto-ping: URL del servicio (Render)
+# Variables de entorno para Render
 PING_URL = os.getenv("RENDER_EXTERNAL_URL")
+PUERTO = os.getenv("PORT", 8080)  # Puerto por defecto: 8080
 
 def auto_ping():
     """Envía pings periódicos para mantener el servicio activo."""
@@ -28,18 +29,16 @@ def auto_ping():
                 logging.warning(f"Ping fallido con código: {response.status_code}")
     except Exception as e:
         logging.error(f"Error enviando ping: {e}")
-    
-    # Programar el próximo ping en 1 minuto y 30 segundos (90 segundos)
-    Timer(90, auto_ping).start()
+
+    # Programar el próximo ping en 60 segundos
+    Timer(60, auto_ping).start()
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Inicia la conversación."""
     context.user_data.clear()
     await update.message.reply_text("Bienvenido. Por favor, ingresa el nombre de la persona o empresa:")
     return NOMBRE
 
 def generar_resumen_parcial(context):
-    """Genera un resumen parcial de los datos ingresados."""
     data = context.user_data
     resumen = (
         f"👤 *Nombre*: {data.get('nombre', '-')}\n"
@@ -56,7 +55,6 @@ def generar_resumen_parcial(context):
     return resumen
 
 async def mostrar_resumen_parcial(update, context):
-    """Muestra los datos parciales ingresados."""
     resumen = generar_resumen_parcial(context)
     await update.message.reply_text(f"📋 Resumen Parcial:\n{resumen}", parse_mode="Markdown")
 
@@ -134,14 +132,6 @@ async def skip_fotos(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def mostrar_resumen(update: Update, context: ContextTypes.DEFAULT_TYPE):
     resumen = generar_resumen_parcial(context)
     await update.message.reply_text(f"✨ *Solicitud Completada* ✨\n\n{resumen}", parse_mode="Markdown")
-    if "enlace" in context.user_data:
-        if context.user_data["enlace"].startswith("http"):
-            await update.message.reply_text(f"🔗 [Ver Enlace]({context.user_data['enlace']})", parse_mode="Markdown")
-        else:
-            await update.message.reply_document(context.user_data["enlace"])
-    if "fotos" in context.user_data:
-        await update.message.reply_photo(context.user_data["fotos"], caption="📸 Vista previa de la foto.")
-    await update.message.reply_text("Si deseas modificar algo, usa /editar. Para finalizar, usa /cancel.")
 
 async def cancelar(update: Update, context: CallbackContext):
     await update.message.reply_text("Solicitud cancelada. Puedes iniciar de nuevo con /start.")
@@ -171,7 +161,7 @@ def main():
     app.add_handler(conv_handler)
 
     auto_ping()
-    app.run_polling()
+    app.run_polling(port=int(PUERTO))
 
 if __name__ == "__main__":
     main()
