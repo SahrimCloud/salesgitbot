@@ -1,16 +1,40 @@
 import os
+import requests
+import logging
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import (
-    ApplicationBuilder, CommandHandler, MessageHandler, filters, 
+    ApplicationBuilder, CommandHandler, MessageHandler, filters,
     ContextTypes, ConversationHandler, CallbackContext
 )
+from threading import Timer
 
 # Estados de la conversación
 NOMBRE, PETICION, CLIENTE, CANTIDAD, COLOR, DIMENSIONES, ENLACE, FECHA, COMENTARIOS, FOTOS, EDITAR = range(11)
 
+# Configuración del logging
+logging.basicConfig(level=logging.INFO)
+
+# Auto-ping: URL del servicio (Render)
+PING_URL = os.getenv("RENDER_EXTERNAL_URL")
+
+def auto_ping():
+    """Envía pings periódicos para mantener el servicio activo."""
+    try:
+        if PING_URL:
+            response = requests.get(PING_URL)
+            if response.status_code == 200:
+                logging.info(f"Ping exitoso a {PING_URL}")
+            else:
+                logging.warning(f"Ping fallido con código: {response.status_code}")
+    except Exception as e:
+        logging.error(f"Error enviando ping: {e}")
+    
+    # Programar el próximo ping en 1 minuto y 30 segundos (90 segundos)
+    Timer(90, auto_ping).start()
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Inicia la conversación."""
-    context.user_data.clear()  # Limpiar datos previos
+    context.user_data.clear()
     await update.message.reply_text("Bienvenido. Por favor, ingresa el nombre de la persona o empresa:")
     return NOMBRE
 
@@ -32,7 +56,7 @@ def generar_resumen_parcial(context):
     return resumen
 
 async def mostrar_resumen_parcial(update, context):
-    """Muestra los datos parciales cada vez que se añade información."""
+    """Muestra los datos parciales ingresados."""
     resumen = generar_resumen_parcial(context)
     await update.message.reply_text(f"📋 Resumen Parcial:\n{resumen}", parse_mode="Markdown")
 
@@ -108,39 +132,16 @@ async def skip_fotos(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return ConversationHandler.END
 
 async def mostrar_resumen(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Muestra el resumen completo de la solicitud."""
     resumen = generar_resumen_parcial(context)
-
     await update.message.reply_text(f"✨ *Solicitud Completada* ✨\n\n{resumen}", parse_mode="Markdown")
-
     if "enlace" in context.user_data:
         if context.user_data["enlace"].startswith("http"):
-            await update.message.reply_text(
-                f"🔗 [Ver Enlace]({context.user_data['enlace']})", parse_mode="Markdown"
-            )
+            await update.message.reply_text(f"🔗 [Ver Enlace]({context.user_data['enlace']})", parse_mode="Markdown")
         else:
             await update.message.reply_document(context.user_data["enlace"])
-
     if "fotos" in context.user_data:
         await update.message.reply_photo(context.user_data["fotos"], caption="📸 Vista previa de la foto.")
-
     await update.message.reply_text("Si deseas modificar algo, usa /editar. Para finalizar, usa /cancel.")
-
-async def editar(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    teclado = [["Nombre", "Petición", "Cliente"], ["Cantidad", "Color", "Dimensiones"], 
-               ["Enlace", "Fecha", "Comentarios"]]
-    markup = ReplyKeyboardMarkup(teclado, one_time_keyboard=True)
-    await update.message.reply_text("¿Qué deseas editar?", reply_markup=markup)
-    return EDITAR
-
-async def editar_campo(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    campo = update.message.text.lower()
-    if campo in context.user_data:
-        await update.message.reply_text(f"Ingrese el nuevo valor para {campo}:")
-        return globals()[campo.upper()]
-    else:
-        await update.message.reply_text("Campo inválido. Intenta nuevamente.")
-        return EDITAR
 
 async def cancelar(update: Update, context: CallbackContext):
     await update.message.reply_text("Solicitud cancelada. Puedes iniciar de nuevo con /start.")
@@ -163,12 +164,13 @@ def main():
             FECHA: [MessageHandler(filters.TEXT & ~filters.COMMAND, fecha)],
             COMENTARIOS: [MessageHandler(filters.TEXT & ~filters.COMMAND, comentarios)],
             FOTOS: [MessageHandler(filters.PHOTO, fotos), CommandHandler("skip", skip_fotos)],
-            EDITAR: [MessageHandler(filters.TEXT & ~filters.COMMAND, editar_campo)],
         },
-        fallbacks=[CommandHandler("cancel", cancelar), CommandHandler("editar", editar)],
+        fallbacks=[CommandHandler("cancel", cancelar)],
     )
 
     app.add_handler(conv_handler)
+
+    auto_ping()
     app.run_polling()
 
 if __name__ == "__main__":
