@@ -1,36 +1,16 @@
 import os
-import requests
 import logging
-from telegram import Update, ReplyKeyboardMarkup
+from telegram import Update
 from telegram.ext import (
     ApplicationBuilder, CommandHandler, MessageHandler, filters,
     ContextTypes, ConversationHandler, CallbackContext
 )
-from threading import Timer
 
 # Estados de la conversación
-NOMBRE, PETICION, CLIENTE, CANTIDAD, COLOR, DIMENSIONES, ENLACE, FECHA, COMENTARIOS, FOTOS, EDITAR = range(11)
+NOMBRE, PETICION, CLIENTE, CANTIDAD, COLOR, DIMENSIONES, ENLACE, FECHA, COMENTARIOS, FOTOS = range(10)
 
 # Configuración del logging
 logging.basicConfig(level=logging.INFO)
-
-# Variables de entorno para Render
-PING_URL = os.getenv("RENDER_EXTERNAL_URL")
-
-def auto_ping():
-    """Envía pings periódicos para mantener el servicio activo."""
-    try:
-        if PING_URL:
-            response = requests.get(PING_URL)
-            if response.status_code == 200:
-                logging.info(f"Ping exitoso a {PING_URL}")
-            else:
-                logging.warning(f"Ping fallido con código: {response.status_code}")
-    except Exception as e:
-        logging.error(f"Error enviando ping: {e}")
-
-    # Programar el próximo ping en 60 segundos
-    Timer(60, auto_ping).start()
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data.clear()
@@ -158,8 +138,6 @@ def main():
     )
 
     app.add_handler(conv_handler)
-
-    auto_ping()  # Ejecutar el auto ping
     app.run_polling()  # Sin necesidad de especificar un puerto
 
 if __name__ == "__main__":
