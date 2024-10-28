@@ -16,7 +16,6 @@ logging.basicConfig(level=logging.INFO)
 
 # Variables de entorno para Render
 PING_URL = os.getenv("RENDER_EXTERNAL_URL")
-PUERTO = os.getenv("PORT", 8080)  # Puerto por defecto: 8080
 
 def auto_ping():
     """Envía pings periódicos para mantener el servicio activo."""
@@ -160,8 +159,8 @@ def main():
 
     app.add_handler(conv_handler)
 
-    auto_ping()
-    app.run_polling(port=int(PUERTO))
+    auto_ping()  # Ejecutar el auto ping
+    app.run_polling()  # Sin necesidad de especificar un puerto
 
 if __name__ == "__main__":
     main()
